@@ -13,6 +13,7 @@ import io.gatling.core.util.NameGen
 import org.fusesource.mqtt.client.{Callback, CallbackConnection, QoS}
 
 class MqttRequestPublishAction(
+  val mustSucceed: Boolean,
   val mqttAttributes: MqttAttributes,
   val coreComponents : CoreComponents,
   val mqttProtocol: MqttProtocol,
@@ -62,17 +63,18 @@ class MqttRequestPublishAction(
 
           private def writeData(isSuccess: Boolean, message: Option[String]) = {
             val requestEndDate = nowMillis
+            val success = if ((isSuccess && mustSucceed) || (!isSuccess && !mustSucceed)) OK else KO
 
             statsEngine.logResponse(
               session,
               requestName,
               ResponseTimings(startTimestamp = requestStartDate, endTimestamp = requestEndDate),
-              if (isSuccess) OK else KO,
+              success,
               None,
-              message
+              if (success == OK) None else message.orElse(Some("Publish expected to fail but it didn't"))
             )
 
-            next ! session
+            next ! (if (success == OK) session else session.markAsFailed)
           }
         })
     }

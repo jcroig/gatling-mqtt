@@ -1,22 +1,17 @@
 package com.github.mnogu.gatling.mqtt.action
 
-import java.util
-import java.util.Arrays.ArrayList
-import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 
 import com.github.mnogu.gatling.mqtt.protocol.MqttProtocol
-import io.gatling.commons.stats.OK
 import io.gatling.commons.util.ClockSingleton._
 import io.gatling.commons.validation.Validation
 import io.gatling.core.CoreComponents
 import io.gatling.core.Predef._
 import io.gatling.core.action.{Action, ExitableAction}
 import io.gatling.core.session._
-import io.gatling.core.stats.message.ResponseTimings
 import io.gatling.core.util.NameGen
 import org.fusesource.hawtbuf.{Buffer, UTF8Buffer}
-import org.fusesource.mqtt.client.{Callback, ExtendedListener, Listener, MQTT}
+import org.fusesource.mqtt.client.{Callback, Listener, MQTT}
 
 import scala.collection.mutable
 
@@ -185,18 +180,20 @@ class MqttRequestConnectAction(
 
       val requestStartDate = nowMillis
       val receivedMessagesBuffer = new ConcurrentHashMap[String, mutable.ArrayBuffer[String]]()
+      val mqttState = new MQttState(false, new ConcurrentHashMap[String, mutable.ArrayBuffer[String]]())
 
       connection.connect(new Callback[Void] {
         override def onSuccess(void: Void): Unit = {
             connection.listener(new Listener() {
 
-              def onDisconnected(): Unit = ()
+              def onDisconnected(): Unit = mqttState.connected = false
 
-              def onConnected(): Unit = ()
+              def onConnected(): Unit = mqttState.connected = true
+
 
               def onPublish(topic: UTF8Buffer, payload: Buffer, ack: Runnable): Unit = {
                 val payloadString = new String(payload.toByteArray)
-                val messages = receivedMessagesBuffer.putIfAbsent(topic.toString, mutable.ArrayBuffer(payloadString))
+                val messages = mqttState.receivedMessages.putIfAbsent(topic.toString, mutable.ArrayBuffer(payloadString))
 
                 if (messages != null) {
                   messages.synchronized {
@@ -212,7 +209,7 @@ class MqttRequestConnectAction(
               }
             })
 
-            next ! session.set("connection", connection).set("mqttReceivedMessages", receivedMessagesBuffer)
+            next ! session.set("connection", connection).set("mqttState", mqttState)
         }
         override def onFailure(value: Throwable): Unit = {
           connection.disconnect(null)

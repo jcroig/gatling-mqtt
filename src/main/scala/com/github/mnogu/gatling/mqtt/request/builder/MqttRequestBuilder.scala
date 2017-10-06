@@ -18,23 +18,32 @@ case class MqttRequestBuilder(requestName: Expression[String]) {
     topic: Expression[String],
     payload: Expression[String],
     qos: QoS,
-    retain: Boolean): MqttRequestPublishActionBuilder =
+    retain: Boolean,
+    mustSucceed: Boolean = true): MqttRequestPublishActionBuilder =
     new MqttRequestPublishActionBuilder(MqttAttributes(
       requestName,
       topic,
       payload,
       qos,
-      retain))
+      retain), mustSucceed)
 
-  def subscribe(topic: Expression[String], qoS: QoS): MqttRequestSubscribeActionBuilder =
-    new MqttRequestSubscribeActionBuilder(MqttAttributes(requestName, topic, "".expressionSuccess, qoS, false))
+  def subscribe(topic: Expression[String], qoS: QoS, mustSucceed: Boolean = true): MqttRequestSubscribeActionBuilder =
+    new MqttRequestSubscribeActionBuilder(MqttAttributes(requestName, topic, "".expressionSuccess, qoS, false), mustSucceed)
 
   def unsubscribe(topic: Expression[String]): MqttRequestUnsubscribeActionBuilder =
     new MqttRequestUnsubscribeActionBuilder(MqttAttributes(requestName, topic, "".expressionFailure, QoS.AT_LEAST_ONCE, false))
 
-  def readMessage(topic: Expression[String])(handler: (String, Session) => Validation[Session]): MqttRequestReadMessageActionBuilder =
+  def readMessage(topic: Expression[String])(handler: (Option[String], Session) => Validation[Session]): MqttRequestReadMessageActionBuilder =
     new MqttRequestReadMessageActionBuilder(requestName, topic)(handler)
 
-  def connect(): MqttRequestConnectActionBuilder = new MqttRequestConnectActionBuilder(requestName)
+  def connect(): MqttRequestConnectActionBuilder =
+    new MqttRequestConnectActionBuilder(requestName)
+
+  def verifyConnected(): MqttRequestVerifyConnectedActionBuilder =
+    new MqttRequestVerifyConnectedActionBuilder(requestName)
+
+  def verifyDisconnected(): MqttRequestVerifyDisconnectedActionBuilder =
+    new MqttRequestVerifyDisconnectedActionBuilder(requestName)
+
   def disconnect(): MqttRequestDisconnectActionBuilder = new MqttRequestDisconnectActionBuilder()
 }

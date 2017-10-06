@@ -8,7 +8,7 @@ import io.gatling.core.session.{Expression, Session}
 import io.gatling.core.structure.ScenarioContext
 
 class MqttRequestReadMessageActionBuilder(requestName: Expression[String],
-                                          topic: Expression[String])(handler: (String, Session) => Validation[Session]) extends ActionBuilder {
+                                          topic: Expression[String])(handler: (Option[String], Session) => Validation[Session]) extends ActionBuilder {
 
   override def build(
     ctx: ScenarioContext, next: Action

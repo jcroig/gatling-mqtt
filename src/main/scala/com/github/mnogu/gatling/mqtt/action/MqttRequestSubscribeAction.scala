@@ -12,6 +12,7 @@ import io.gatling.core.util.NameGen
 import org.fusesource.mqtt.client.{Callback, CallbackConnection, QoS, Topic}
 
 class MqttRequestSubscribeAction(
+  val mustSucceed: Boolean,
   val mqttAttributes: MqttAttributes,
   val coreComponents : CoreComponents,
   val mqttProtocol: MqttProtocol,
@@ -50,17 +51,18 @@ class MqttRequestSubscribeAction(
 
       private def subscribed(isSuccess: Boolean, message: Option[String]) = {
         val requestEndDate = nowMillis
+        val success = if ((isSuccess && mustSucceed) || (!isSuccess && !mustSucceed)) OK else KO
 
         statsEngine.logResponse(
           session,
           requestName,
           ResponseTimings(startTimestamp = requestStartDate, endTimestamp = requestEndDate),
-          if (isSuccess) OK else KO,
+          success,
           None,
-          message
+          if (success == OK) None else message.orElse(Some("Subscribe expected to fail but it didn't"))
         )
 
-        next ! session
+        next ! (if (success == OK) session else session.markAsFailed)
       }
     })
   }

@@ -6,7 +6,7 @@ import io.gatling.core.action.Action
 import io.gatling.core.action.builder.ActionBuilder
 import io.gatling.core.structure.ScenarioContext
 
-class MqttRequestSubscribeActionBuilder(mqttAttributes: MqttAttributes)
+class MqttRequestSubscribeActionBuilder(mqttAttributes: MqttAttributes, mustSucceed: Boolean)
   extends ActionBuilder {
 
   override def build(
@@ -17,6 +17,7 @@ class MqttRequestSubscribeActionBuilder(mqttAttributes: MqttAttributes)
     val mqttComponents : MqttComponents = protocolComponentsRegistry.components(MqttProtocol.MqttProtocolKey)
     
     new MqttRequestSubscribeAction(
+      mustSucceed,
       mqttAttributes,
       coreComponents,
       mqttComponents.mqttProtocol,
